@@ -25,81 +25,103 @@
 ?>
 <script type='text/javascript' src='https://www.google.com/jsapi'></script>
 <script type='text/javascript'>
-  google.load('visualization', '1', {'packages': ['geochart']});
-  google.setOnLoadCallback(drawRegionsMap);
-  function drawRegionsMap() {
-    var data = new google.visualization.DataTable();
-    data.addColumn('string', 'Site');
-    data.addColumn('number', 'Status');
-    data.addColumn({type: 'string', role: 'tooltip'});
-    data.addRows([
+	google.load('visualization', '1', {'packages': ['geochart']});
+	google.setOnLoadCallback(drawRegionsMap);
+	function drawRegionsMap() {
+		var data = new google.visualization.DataTable();
+		data.addColumn('string', 'Site');
+		data.addColumn('number', 'Status');
+		data.addColumn('number', 'Size');
+		data.addColumn({type: 'string', role: 'tooltip', 'p': {'html': true}});
+		data.addRows([
 <?php
 $locations = array();
 foreach (getlocations() as $location) {
-  $devices = array();
-  $devices_down = array();
-  $devices_up = array();
-  $count = 0;
-  $down  = 0;
-  // FIXME - doesn't handle sysLocation override.
-  foreach (dbFetchRows("SELECT * FROM devices WHERE location = ?", array($location)) as $device) {
-    $devices[] = $device['hostname'];
-    $devices_up[] = $device;
-    $count++;
-    if ($device['status'] == "0" && $device['disabled'] == "0" && $device['ignore'] == "0") {
-      $down++;
-      $devices_down[] = $device['hostname']." DOWN";
-    }
-  }
-  $pdown = ($down / $count)*100;
-  $devices_down = array_merge(array(count($devices_up). " Devices OK"), $devices_down);
-  $locations[] = "['".$location."', ".$pdown.", '".implode(", ", $devices_down)."']";
+	$devices = array();
+	$devices_down = array();
+	$devices_up = array();
+	$count = 0;
+	$down  = 0;
+	foreach (dbFetchRows("SELECT devices.device_id,devices.hostname,devices.status FROM devices LEFT JOIN devices_attribs ON devices.device_id = devices_attribs.device_id WHERE ( devices.location = ? || ( devices_attribs.attrib_type = 'override_sysLocation_string' && devices_attribs.attrib_value = ? ) ) && devices.disabled = 0 && devices.ignore = 0 GROUP BY devices.hostname", array($location,$location)) as $device) {
+		if( $config['frontpage_custom']['globe'] == 'devices' || empty($config['frontpage_custom']['globe']) ) {
+			$devices[] = $device['hostname'];
+			$count++;
+			if( $device['status'] == "0" ) {
+				$down++;
+				$devices_down[] = $device['hostname']." DOWN";
+			} else {
+				$devices_up[] = $device;
+			}
+		} elseif( $config['frontpage_custom']['globe'] == 'ports' ) {
+			foreach( dbFetchRows("SELECT ifName,ifOperStatus,ifAdminStatus FROM ports WHERE ports.device_id = ? && ports.ignore = 0 && ports.disabled = 0 && ports.deleted = 0",array($device['device_id'])) as $port ) {
+				$count++;
+				if( $port['ifOperStatus'] == 'down' && $port['ifAdminStatus'] == 'up' ) {
+					$down++;
+					$devices_down[] = $device['hostname']."/".$port['ifName']." DOWN";
+				} else {
+					$devices_up[] = $port;
+				}
+			}
+		}
+	}
+	$pdown = ($down / $count)*100;
+	if( $config['frontpage_custom']['globe'] == 'devices' || empty($config['frontpage_custom']['globe']) ) {
+		$devices_down = array_merge(array(count($devices_up). " Devices OK"), $devices_down);
+	} elseif( $config['frontpage_custom']['globe'] == 'ports' ) {
+		$devices_down = array_merge(array(count($devices_up). " Ports OK"), $devices_down);
+	}
+	$locations[] = "			['".$location."', ".$pdown.", ".$count.", '".implode(",<br/> ", $devices_down)."']";
 }
 echo implode(",\n", $locations);
 ?>
-    ]);
-    var options = {
-      region: 'world',
-      resolution: 'countries',
-      displayMode: 'markers',
-      keepAspectRatio: 1,
-      magnifyingGlass: {enable: true, zoomFactor: 8},
-      colorAxis: {minValue: 0,  maxValue: 100, colors: ['green', 'yellow', 'red']},
-      markerOpacity: 0.90,
-    };
-    var chart = new google.visualization.GeoChart(document.getElementById('chart_div'));
-    chart.draw(data, options);
-  };
+
+		]);
+		var options = {
+			region: 'world',
+			resolution: 'countries',
+			displayMode: 'markers',
+			keepAspectRatio: 1,
+			magnifyingGlass: {enable: true, zoomFactor: 100},
+			colorAxis: {minValue: 0,  maxValue: 100, colors: ['green', 'yellow', 'red']},
+			markerOpacity: 0.90,
+			tooltip: {isHtml: true},
+		};
+		var chart = new google.visualization.GeoChart(document.getElementById('chart_div'));
+		chart.draw(data, options);
+	};
 </script>
 <?php
 include_once("includes/object-cache.inc.php");
-echo '<div class="container">';
-  echo '<div class="row">';
-    echo '<div class="col-md-8">';
-      echo '<div id="chart_div"></div>';
-    echo '</div>';
-    echo '<div class="col-md-4">';
-      echo '<div class="container">';
-        echo '<div class="row">';
-          echo '<div class="col-md-4">';
-            include_once("includes/device-summary-vert.inc.php");
-          echo '</div>';
-        echo '</div>';
-        echo '<div class="row">';
-          echo '<div class="col-md-4">';
-            include_once("includes/front/boxes.inc.php");
-          echo '</div>';
-        echo '</div>';
-      echo '</div>';
-    echo '</div>';
-  echo '<div class="row">';
-    echo '<div class="col-md-12">';
-      $device['device_id'] = '-1';
-      require_once('includes/print-alerts.php');
-      unset($device['device_id']);
-    echo '</div>';
-  echo '</div>';
-echo '</div>';
+echo '<div class="container">
+	<div class="row">
+		<div class="col-md-8">
+			<div id="chart_div"></div>
+		</div>
+		<div class="col-md-4">
+			<div class="container">
+				<div class="row">
+					<div class="col-md-4">';
+						include_once("includes/device-summary-vert.inc.php");
+echo '					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-4">';
+						include_once("includes/front/boxes.inc.php");
+echo '					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-12">';
+			$device['device_id'] = '-1';
+			require_once('includes/print-alerts.php');
+			unset($device['device_id']);
+echo '		</div>
+	</div>
+</div>';
+
+//From default.php - This code is not part of above license.
 if ($config['enable_syslog']) {
 $sql = "SELECT *, DATE_FORMAT(timestamp, '%D %b %T') AS date from syslog ORDER BY timestamp DESC LIMIT 20";
 $query = mysql_query($sql);

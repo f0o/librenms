@@ -25,13 +25,11 @@
 ?>
 <script type='text/javascript' src='https://www.google.com/jsapi'></script>
 <script type='text/javascript'>
-	google.load('visualization', '1', {'packages': ['geochart']});
+	google.load('visualization', '1', {'packages': ['map']});
 	google.setOnLoadCallback(drawRegionsMap);
 	function drawRegionsMap() {
 		var data = new google.visualization.DataTable();
 		data.addColumn('string', 'Site');
-		data.addColumn('number', 'Status');
-		data.addColumn('number', 'Size');
 		data.addColumn({type: 'string', role: 'tooltip', 'p': {'html': true}});
 		data.addRows([
 <?php
@@ -40,21 +38,16 @@ foreach (getlocations() as $location) {
 	$devices = array();
 	$devices_down = array();
 	$devices_up = array();
-	$count = 0;
-	$down  = 0;
 	foreach (dbFetchRows("SELECT devices.device_id,devices.hostname,devices.status FROM devices LEFT JOIN devices_attribs ON devices.device_id = devices_attribs.device_id WHERE ( devices.location = ? || ( devices_attribs.attrib_type = 'override_sysLocation_string' && devices_attribs.attrib_value = ? ) ) && devices.disabled = 0 && devices.ignore = 0 GROUP BY devices.hostname", array($location,$location)) as $device) {
 		if( $config['frontpage_custom']['globe'] == 'devices' || empty($config['frontpage_custom']['globe']) ) {
 			$devices[] = $device['hostname'];
-			$count++;
 			if( $device['status'] == "0" ) {
-				$down++;
 				$devices_down[] = $device['hostname']." DOWN";
 			} else {
 				$devices_up[] = $device;
 			}
 		} elseif( $config['frontpage_custom']['globe'] == 'ports' ) {
 			foreach( dbFetchRows("SELECT ifName,ifOperStatus,ifAdminStatus FROM ports WHERE ports.device_id = ? && ports.ignore = 0 && ports.disabled = 0 && ports.deleted = 0",array($device['device_id'])) as $port ) {
-				$count++;
 				if( $port['ifOperStatus'] == 'down' && $port['ifAdminStatus'] == 'up' ) {
 					$down++;
 					$devices_down[] = $device['hostname']."/".$port['ifName']." DOWN";
@@ -64,13 +57,12 @@ foreach (getlocations() as $location) {
 			}
 		}
 	}
-	$pdown = ($down / $count)*100;
 	if( $config['frontpage_custom']['globe'] == 'devices' || empty($config['frontpage_custom']['globe']) ) {
 		$devices_down = array_merge(array(count($devices_up). " Devices OK"), $devices_down);
 	} elseif( $config['frontpage_custom']['globe'] == 'ports' ) {
 		$devices_down = array_merge(array(count($devices_up). " Ports OK"), $devices_down);
 	}
-	$locations[] = "			['".$location."', ".$pdown.", ".$count.", '".implode(",<br/> ", $devices_down)."']";
+	$locations[] = "			['".$location."', '".implode(",<br/> ", $devices_down)."']";
 }
 echo implode(",\n", $locations);
 ?>
@@ -85,8 +77,9 @@ echo implode(",\n", $locations);
 			colorAxis: {minValue: 0,  maxValue: 100, colors: ['green', 'yellow', 'red']},
 			markerOpacity: 0.90,
 			tooltip: {isHtml: true},
+			showTip: true,
 		};
-		var chart = new google.visualization.GeoChart(document.getElementById('chart_div'));
+		var chart = new google.visualization.Map(document.getElementById('chart_div'));
 		chart.draw(data, options);
 	};
 </script>

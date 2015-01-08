@@ -123,7 +123,7 @@ echo '		</div>
 
 //From default.php - This code is not part of above license.
 if ($config['enable_syslog']) {
-$sql = "SELECT *, DATE_FORMAT(timestamp, '%D %b %T') AS date from syslog ORDER BY timestamp DESC LIMIT 20";
+$sql = "SELECT *, DATE_FORMAT(timestamp, '%D %b %T') AS date from syslog ORDER BY seq DESC LIMIT 20";
 $query = mysql_query($sql);
 echo('<div class="container-fluid">
           <div class="row">

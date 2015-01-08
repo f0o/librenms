@@ -92,13 +92,13 @@ echo implode(",\n", $locations);
 </script>
 <?php
 include_once("includes/object-cache.inc.php");
-echo '<div class="container">
+echo '<div class="container-fluid">
 	<div class="row">
 		<div class="col-md-8">
 			<div id="chart_div"></div>
 		</div>
 		<div class="col-md-4">
-			<div class="container">
+			<div class="container-fluid">
 				<div class="row">
 					<div class="col-md-4">';
 						include_once("includes/device-summary-vert.inc.php");

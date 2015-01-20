@@ -74,6 +74,19 @@ db_password = config['db_pass']
 db_server   = config['db_host']
 db_dbname   = config['db_name']
 
+if 'distributed_poller' in config and config['distributed_poller'] == True and config['memcached']['enable']:
+    try:
+        import memcache
+        memc = memcache.Client([config['memcached']['host']+':'+str(config['memcached']['port'])])
+        distpoll = True
+    except:
+        print "ERROR: missing the memcache python module:"
+        print "On ubuntu: apt-get install python-memcache"
+        print "Disabling distributed poller."
+        distpoll = False
+else:
+    distpoll = False
+
 s_time = time.time()
 real_duration = 0
 per_device_duration = {}
@@ -142,22 +155,38 @@ def printworker():
 def poll_worker():
     while True:
         device_id = poll_queue.get()
-        try:
-            start_time = time.time()
-            command = "/usr/bin/env php %s -h %s >> /dev/null 2>&1" % (poller_path, device_id)
-            subprocess.check_call(command, shell=True)
-            elapsed_time = int(time.time() - start_time)
-            print_queue.put([threading.current_thread().name, device_id, elapsed_time])
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            pass
+        if distpoll == False or memc.get('poller.device.'+str(device_id)) == None:
+            if distpoll == True:
+                memc.set('poller.device.'+str(device_id),os.uname()[1],300)
+            try:
+                start_time = time.time()
+                command = "/usr/bin/env php %s -h %s >> /dev/null 2>&1" % (poller_path, device_id)
+                subprocess.check_call(command, shell=True)
+                elapsed_time = int(time.time() - start_time)
+                print_queue.put([threading.current_thread().name, device_id, elapsed_time])                
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except:
+                pass
         poll_queue.task_done()
 
 poll_queue = Queue.Queue()
 print_queue = Queue.Queue()
 
 print "INFO: starting the poller at %s with %s threads, slowest devices first" % (time.time(), amount_of_workers)
+
+if distpoll == True:
+    if memc.get("poller.master") == None:
+        print "Registering as Master-Node"
+        memc.set("poller.master",os.uname()[1])
+        IsNode = False
+    else:
+        print "Registering as Node"
+        IsNode = True
+        if memc.get("poller.nodes") == None:
+            memc.set("poller.nodes",1)
+        else:
+            memc.incr("poller.nodes")
 
 for device_id in devices_list:
     poll_queue.put(device_id)
@@ -180,6 +209,20 @@ except (KeyboardInterrupt, SystemExit):
 total_time = int(time.time() - s_time)
 
 print "INFO: poller-wrapper polled %s devices in %s seconds with %s workers" % (len(devices_list), total_time, amount_of_workers)
+
+if distpoll == True:
+    master = memc.get("poller.master")
+    if master == os.uname()[1] and IsNode == False:
+        print "Wait for all poller-nodes to finish"
+        while memc.get("poller.nodes") > 1:
+            time.sleep(1)
+        for device_id in devices_list:
+            memc.delete('poller.device.'+str(device_id))
+        print "Clearing Nodes"
+        memc.delete("poller.master")
+        memc.delete("poller.nodes")
+    else:
+        memc.decr("poller.nodes")
 
 show_stopper = False
 

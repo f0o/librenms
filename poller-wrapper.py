@@ -74,14 +74,20 @@ db_password = config['db_pass']
 db_server   = config['db_host']
 db_dbname   = config['db_name']
 
+if 'poller_id' in config:
+    poller_id = str(config['poller_id'])
+else
+    poller_id = False
+
 if 'distributed_poller' in config and config['distributed_poller'] == True and config['memcached']['enable']:
     try:
         import memcache
         memc = memcache.Client([config['memcached']['host']+':'+str(config['memcached']['port'])])
         distpoll = True
     except:
-        print "ERROR: missing the memcache python module:"
-        print "On ubuntu: apt-get install python-memcache"
+        print "ERROR: missing memcache python module:"
+        print "On deb systems: apt-get install python-memcache"
+        print "On other systems: easy_install python-memcached"
         print "Disabling distributed poller."
         distpoll = False
 else:
@@ -118,7 +124,10 @@ except:
     thus greatening our chances of completing _all_ the work in exactly the time it takes to 
     poll the slowest device! cool stuff he
 """
-query = "select device_id from devices where disabled = 0 order by last_polled_timetaken desc"
+if poller_id not False:
+    query = "select device_id from devices where poller_id = " + poller_id + " and disabled = 0 order by last_polled_timetaken desc"
+else
+    query = "select device_id from devices where disabled = 0 order by last_polled_timetaken desc"
 
 cursor.execute(query)
 devices = cursor.fetchall()

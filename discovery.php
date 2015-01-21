@@ -98,7 +98,13 @@ include("includes/sql-schema/update.php");
 
 $discovered_devices = 0;
 
-foreach (dbFetch("SELECT * FROM `devices` WHERE status = 1 AND disabled = 0 $where ORDER BY device_id DESC") as $device)
+if( $config['poller_id'] ) {
+	$query = "SELECT * FROM `devices` WHERE poller_id = ".$config['poller_id']." AND status = 1 AND disabled = 0 $where ORDER BY device_id DESC";
+} else {
+	$query = "SELECT * FROM `devices` WHERE status = 1 AND disabled = 0 $where ORDER BY device_id DESC";
+}
+
+foreach (dbFetch($query) as $device)
 {
   discover_device($device, $options);
 }

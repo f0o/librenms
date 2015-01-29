@@ -76,14 +76,28 @@ db_dbname   = config['db_name']
 
 if 'poller_id' in config:
     poller_id = str(config['poller_id'])
-else
+else:
     poller_id = False
 
 if 'distributed_poller' in config and config['distributed_poller'] == True and config['memcached']['enable']:
     try:
         import memcache
         memc = memcache.Client([config['memcached']['host']+':'+str(config['memcached']['port'])])
-        distpoll = True
+        memc.set("ping",1,1)
+        if memc.get("ping") is not None:
+            if memc.get("poller.master") == None:
+                print "Registered as Master"
+                memc.set("poller.master",os.uname()[1],10)
+                memc.set("poller.nodes",0,10)
+                IsNode = False
+            else:
+                print "Registered as Node"
+                IsNode = True
+                memc.incr("poller.nodes")
+            distpoll = True
+        else:
+            distpoll = False
+            IsNode = False
     except:
         print "ERROR: missing memcache python module:"
         print "On deb systems: apt-get install python-memcache"
@@ -124,9 +138,9 @@ except:
     thus greatening our chances of completing _all_ the work in exactly the time it takes to 
     poll the slowest device! cool stuff he
 """
-if poller_id not False:
+if poller_id is not False:
     query = "select device_id from devices where poller_id = " + poller_id + " and disabled = 0 order by last_polled_timetaken desc"
-else
+else:
     query = "select device_id from devices where disabled = 0 order by last_polled_timetaken desc"
 
 cursor.execute(query)
@@ -144,8 +158,31 @@ db.close()
 """
 
 def printworker():
+    nodeso = 0
     while True:
-        worker_id, device_id, elapsed_time = print_queue.get()
+        global IsNode
+        global distpoll
+        if distpoll is True:
+            if IsNode is False:
+                memc_touch('poller.master',10)
+                nodes = memc.get('poller.nodes')
+                if nodes is None:
+                    print "WARNING: Lost Memcached. Taking over all devices. Nodes will quit shortly."
+                    distpoll = False
+                    nodes = nodeso
+                if nodes is not nodeso:
+                    print "INFO: %s Node(s) Total" % (nodes)
+                    nodeso = nodes
+            else:
+                memc_touch('poller.nodes',10)
+            try:
+                worker_id, device_id, elapsed_time = print_queue.get(False)
+            except:
+                pass
+                time.sleep(1)
+                continue
+        else:
+            worker_id, device_id, elapsed_time = print_queue.get()
         global real_duration
         global per_device_duration
         real_duration += elapsed_time
@@ -167,6 +204,10 @@ def poll_worker():
         if distpoll == False or memc.get('poller.device.'+str(device_id)) == None:
             if distpoll == True:
                 memc.set('poller.device.'+str(device_id),os.uname()[1],300)
+                if memc.get('poller.device.'+str(device_id)) != os.uname()[1] and IsNode == True:
+                    print "Lost Memcached, Not polling Device %s as Node. Master will poll it." % device_id
+                    poll_queue.task_done()
+                    continue
             try:
                 start_time = time.time()
                 command = "/usr/bin/env php %s -h %s >> /dev/null 2>&1" % (poller_path, device_id)
@@ -177,25 +218,20 @@ def poll_worker():
                 raise
             except:
                 pass
-        poll_queue.task_done()
+        poll_queue.task_done()        
+
+def memc_touch(key,time):
+    try:
+        global memc
+        val = memc.get(key)
+        memc.set(key,val,time)
+    except:
+        pass
 
 poll_queue = Queue.Queue()
 print_queue = Queue.Queue()
 
 print "INFO: starting the poller at %s with %s threads, slowest devices first" % (time.time(), amount_of_workers)
-
-if distpoll == True:
-    if memc.get("poller.master") == None:
-        print "Registering as Master-Node"
-        memc.set("poller.master",os.uname()[1])
-        IsNode = False
-    else:
-        print "Registering as Node"
-        IsNode = True
-        if memc.get("poller.nodes") == None:
-            memc.set("poller.nodes",1)
-        else:
-            memc.incr("poller.nodes")
 
 for device_id in devices_list:
     poll_queue.put(device_id)
@@ -223,8 +259,9 @@ if distpoll == True:
     master = memc.get("poller.master")
     if master == os.uname()[1] and IsNode == False:
         print "Wait for all poller-nodes to finish"
-        while memc.get("poller.nodes") > 1:
+        while memc.get("poller.nodes") > 0:
             time.sleep(1)
+        print "Clearing Locks"
         for device_id in devices_list:
             memc.delete('poller.device.'+str(device_id))
         print "Clearing Nodes"

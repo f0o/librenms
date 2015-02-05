@@ -102,11 +102,7 @@ echo("Starting polling run:\n\n");
 $polled_devices = 0;
 if (!isset($query))
 {
-  if( $config['poller_id'] ) {
-    $query = "SELECT `device_id` FROM `devices` WHERE `poller_id` = ".$config['poller_id']." AND `disabled` = 0 $where ORDER BY `device_id` ASC";
-  } else {
-    $query = "SELECT `device_id` FROM `devices` WHERE `disabled` = 0 $where ORDER BY `device_id` ASC";
-  }
+  $query = "SELECT `device_id` FROM `devices` WHERE `disabled` = 0 $where ORDER BY `device_id` ASC";
 }
 
 foreach (dbFetch($query) as $device)

@@ -39,6 +39,10 @@ function dbQuery($sql, $parameters = array()) {
 	*/
 
 	$result = mysql_query($fullSql); // sets $this->result
+       	if (!empty(mysql_error())) {
+         echo("\nSQL[".$fullSql."] "); 
+         print mysql_error();
+        }
 	/*
 	if($this->logFile) {
 		$time_end = microtime(true);
@@ -118,9 +122,9 @@ function dbUpdate($data, $table, $where = null, $parameters = array()) {
 
 	// need field name and placeholder value
 	// but how merge these field placeholders with actual $parameters array for the WHERE clause
-	$sql = 'UPDATE `' . $table . '` set ';
+	$sql = 'UPDATE `' . $table . '` SET ';
 	foreach($data as $key => $value) {
-                $sql .= "`".$key."` ". '=:' . $key . ',';
+                $sql .= "`".$key."` = '" . $value . "',";
 	}
 	$sql = substr($sql, 0, -1); // strip off last comma
 

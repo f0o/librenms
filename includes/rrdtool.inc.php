@@ -107,6 +107,7 @@ function rrdtool_graph($graph_file, $options)
 
     if ($config['rrdcached'])
     {
+      $options = str_replace($config['install_dir']."/rrd/","",$options);
       fwrite($rrd_pipes[0], "graph --daemon " . $config['rrdcached'] . " $graph_file $options");
     } else {
       fwrite($rrd_pipes[0], "graph $graph_file $options");
@@ -153,6 +154,7 @@ function rrdtool($command, $filename, $options)
   $cmd = "$command $filename $options";
   if ($command != "create" && $config['rrdcached'])
   {
+    $cmd = str_replace($config['install_dir']."/rrd/","",$cmd);
     $cmd .= " --daemon " . $config['rrdcached'];
   }
 

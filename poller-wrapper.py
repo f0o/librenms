@@ -101,10 +101,10 @@ def memc_touch(key,time):
     except:
         pass
 
-if 'distributed_poller' in config and config['distributed_poller'] == True and config['memcached']['enable']:
+if 'distributed_poller' in config and 'distributed_poller_host' in config and 'distributed_poller_port' in config and config['distributed_poller'] == True:
     try:
         import memcache, uuid
-        memc = memcache.Client([config['memcached']['host']+':'+str(config['memcached']['port'])])
+        memc = memcache.Client([config['distributed_poller_host']+':'+str(config['distributed_poller_port'])])
         if memc_alive() == True:
             if memc.get("poller.master") == None:
                 print "Registered as Master"
@@ -117,6 +117,7 @@ if 'distributed_poller' in config and config['distributed_poller'] == True and c
                 memc.incr("poller.nodes")
             distpoll = True
         else:
+            print "Could not connect to memcached, disabling distributed poller."
             distpoll = False
             IsNode = False
     except:

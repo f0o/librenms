@@ -133,6 +133,7 @@ else:
 s_time = time.time()
 real_duration = 0
 per_device_duration = {}
+polled_devices = 0
 
 """
     Take the amount of threads we want to run in parallel from the commandline
@@ -223,8 +224,10 @@ def printworker():
 # EOC4
         global real_duration
         global per_device_duration
+        global polled_devices
         real_duration += elapsed_time
         per_device_duration[device_id] = elapsed_time
+        polled_devices += 1
         if elapsed_time < 300:
             print "INFO: worker %s finished device %s in %s seconds" % (worker_id, device_id, elapsed_time)
         else:
@@ -285,7 +288,7 @@ except (KeyboardInterrupt, SystemExit):
 
 total_time = int(time.time() - s_time)
 
-print "INFO: poller-wrapper polled %s devices in %s seconds with %s workers" % (len(devices_list), total_time, amount_of_workers)
+print "INFO: poller-wrapper polled %s devices in %s seconds with %s workers" % (polled_devices, total_time, amount_of_workers)
 
 # (c) 2015, GPLv3, Daniel Preussker <f0o@devilcode.org> <<<EOC6
 if distpoll == True or memc_alive() is True:

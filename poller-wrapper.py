@@ -75,10 +75,10 @@ db_server   = config['db_host']
 db_dbname   = config['db_name']
 
 # (c) 2015, GPLv3, Daniel Preussker <f0o@devilcode.org> <<<EOC1
-if 'poller_id' in config:
-    poller_id = str(config['poller_id'])
+if 'distributed_poller_group' in config:
+    poller_group = str(config['distributed_poller_group'])
 else:
-    poller_id = False
+    poller_group = False
 
 def memc_alive():
     try:
@@ -101,14 +101,14 @@ def memc_touch(key,time):
     except:
         pass
 
-if 'distributed_poller' in config and 'distributed_poller_host' in config and 'distributed_poller_port' in config and config['distributed_poller'] == True:
+if 'distributed_poller' in config and 'distributed_poller_memcached_host' in config and 'distributed_poller_memcached_port' in config and config['distributed_poller'] == True:
     try:
         import memcache, uuid
-        memc = memcache.Client([config['distributed_poller_host']+':'+str(config['distributed_poller_port'])])
+        memc = memcache.Client([config['distributed_poller_memcached_host']+':'+str(config['distributed_poller_memcached_port'])])
         if memc_alive() == True:
             if memc.get("poller.master") == None:
                 print "Registered as Master"
-                memc.set("poller.master",os.uname()[1],10)
+                memc.set("poller.master",config['distributed_poller_name'],10)
                 memc.set("poller.nodes",0,300)
                 IsNode = False
             else:
@@ -163,8 +163,8 @@ except:
     poll the slowest device! cool stuff he
 """
 # (c) 2015, GPLv3, Daniel Preussker <f0o@devilcode.org> <<<EOC2
-if poller_id is not False:
-    query = "select device_id from devices where (poller_id = " + poller_id + " or poller_id = 0) and disabled = 0 order by last_polled_timetaken desc"
+if poller_group is not False:
+    query = "select device_id from devices where (poller_group = " + poller_group + " or poller_group = 0) and disabled = 0 order by last_polled_timetaken desc"
 else:
     query = "select device_id from devices where disabled = 0 order by last_polled_timetaken desc"
 # EOC2
@@ -245,7 +245,7 @@ def poll_worker():
 # (c) 2015, GPLv3, Daniel Preussker <f0o@devilcode.org> <<<EOC5
         if distpoll == False or memc.get('poller.device.'+str(device_id)) == None:
             if distpoll == True:
-                memc.set('poller.device.'+str(device_id),os.uname()[1],300)
+                memc.set('poller.device.'+str(device_id),config['distributed_poller_name'],300)
                 if memc_alive() == False and IsNode is True:
                     print "Lost Memcached, Not polling Device %s as Node. Master will poll it." % device_id
                     poll_queue.task_done()
@@ -293,7 +293,7 @@ print "INFO: poller-wrapper polled %s devices in %s seconds with %s workers" % (
 # (c) 2015, GPLv3, Daniel Preussker <f0o@devilcode.org> <<<EOC6
 if distpoll == True or memc_alive() is True:
     master = memc.get("poller.master")
-    if master == os.uname()[1] and IsNode == False:
+    if master == config['distributed_poller_name'] and IsNode == False:
         print "Wait for all poller-nodes to finish"
         nodes = memc.get("poller.nodes")
         while nodes > 0 and nodes is not None:

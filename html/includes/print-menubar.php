@@ -60,6 +60,7 @@ if (isset($config['site_style']) && ($config['site_style'] == 'dark' || $config[
 if ($_SESSION['userlevel'] >= '10') {
 ?>
 <li><a href="<?php echo(generate_url(array('page'=>'alert-rules'))); ?>"><i class="fa fa-tasks fa-fw fa-lg"></i> Alert Rules</a></li>
+<li><a href="<?php echo(generate_url(array('page'=>'alert-groups'))); ?>"><i class="fa fa-th fa-fw fa-lg"></i> Alert Groups</a></li>
 <li><a href="<?php echo(generate_url(array('page'=>'templates'))); ?>"><i class="fa fa-sitemap fa-fw fa-lg"></i> Alert Templates</a></li>
 <?php
 }

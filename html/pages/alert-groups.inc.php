@@ -10,7 +10,7 @@
 		<span id="message"></span>
 	</div>
 </div>
-<?
+<?php
 $no_refresh = TRUE;
 require_once('includes/modal/new_alert_group.inc.php');
 require_once('includes/modal/delete_alert_group.inc.php');

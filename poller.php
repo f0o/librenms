@@ -12,20 +12,23 @@
  * @copyright  (C) 2006 - 2012 Adam Armstrong
  *
  */
+if( !defined('IS_DAEMON') ) {
+	chdir(dirname($argv[0]));
 
-chdir(dirname($argv[0]));
-
-include("includes/defaults.inc.php");
-include("config.php");
-include("includes/definitions.inc.php");
-include("includes/functions.php");
-include("includes/polling/functions.inc.php");
-include("includes/alerts.inc.php");
+	require_once "includes/defaults.inc.php";
+	require_once "config.php";
+	require_once "includes/definitions.inc.php";
+	require_once "includes/functions.php";
+	require_once "includes/polling/functions.inc.php";
+	require_once "includes/alerts.inc.php";
+}
 
 $poller_start = utime();
 echo($config['project_name_version']." Poller\n\n");
 
-$options = getopt("h:m:i:n:r::d::a::");
+if( !isset($options) ) {
+	$options = getopt("h:m:i:n:r::d::a::");
+}
 
 if ($options['h'] == "odd")      { $options['n'] = "1"; $options['i'] = "2"; }
 elseif ($options['h'] == "even") { $options['n'] = "0"; $options['i'] = "2"; }

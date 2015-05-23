@@ -12,21 +12,24 @@
  * @copyright  (C) 2006 - 2012 Adam Armstrong
  *
  */
+if( !defined('IS_DAEMON') ) {
+	chdir(dirname($argv[0]));
 
-chdir(dirname($argv[0]));
-
-include("includes/defaults.inc.php");
-include("config.php");
-include("includes/definitions.inc.php");
-include("includes/functions.php");
-include("includes/discovery/functions.inc.php");
+	require_once "includes/defaults.inc.php";
+	require_once "config.php";
+	require_once "includes/definitions.inc.php";
+	require_once "includes/functions.php";
+}
+require_once "includes/discovery/functions.inc.php";
 
 $start = utime();
 $runtime_stats = array();
 
 // Observium Device Discovery
 
-$options = getopt("h:m:i:n:d::a::q");
+if( !isset($options) ) {
+	$options = getopt("h:m:i:n:d::a::q");
+}
 
 if (!isset($options['q']))
 {

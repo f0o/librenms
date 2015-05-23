@@ -30,7 +30,7 @@ push-personal pp:
 push-testing pt:
 	$(GIT) push testing
 
-update-subtrees: datetime-subtree moment-subtree font-awesome vis
+update-subtrees: datetime-subtree moment-subtree font-awesome vis typeahead fastcgi-client
 
 datetime-subtree:
 	$(GIT_SUBTREE) --prefix=html/js/datetime https://github.com/Eonasdan/bootstrap-datetimepicker master
@@ -45,4 +45,7 @@ vis:
 	$(GIT_SUBTREE) --prefix=lib/vis https://github.com/almende/vis.git master
 
 typeahead:
-	$(GIT_SUBTREE) -- prefix=lib/typeahead https://github.com/twitter/typeahead.js.git master
+	$(GIT_SUBTREE) --prefix=lib/typeahead https://github.com/twitter/typeahead.js.git master
+
+fastcgi-client:
+	$(GIT_SUBTREE) --prefix=lib/fastcgi-client https://github.com/adoy/PHP-FastCGI-Client.git master

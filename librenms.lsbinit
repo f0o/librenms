@@ -17,6 +17,8 @@ NAME="librenms"
 DAEMON=/opt/librenms/daemon.php
 PIDFILE=/var/run/librenms.pid
 TIMEOUT=30
+USER="librenms"
+GROUP="librenms"
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -47,9 +49,9 @@ do_start()
 	#   0 if daemon has been started
 	#   1 if daemon was already running
 	#   2 if daemon could not be started
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
+	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test --chuid $USER > /dev/null \
 		|| return 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --background --make-pidfile 2>/dev/null \
+	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --background --make-pidfile --chuid $USER 2>/dev/null \
 		|| return 2
 	# Add code here, if necessary, that waits for the process to be ready
 	# to handle requests from services started subsequently which depend
@@ -66,7 +68,7 @@ do_stop()
 	#   1 if daemon was already stopped
 	#   2 if daemon could not be stopped
 	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=QUIT/$TIMEOUT/TERM/5/KILL/5 --pidfile $PIDFILE --name $NAME
+	start-stop-daemon --stop --quiet --retry=QUIT/$TIMEOUT/TERM/5/KILL/5 --pidfile $PIDFILE
 	RETVAL="$?"
 	[ "$RETVAL" = 2 ] && return 2
 	# Wait for children to finish too if this is a daemon that forks
@@ -75,7 +77,7 @@ do_stop()
 	# that waits for the process to drop all resources that could be
 	# needed by services started subsequently.  A last resort is to
 	# sleep for some time.
-	start-stop-daemon --stop --quiet --oknodo --retry=0/30/TERM/5/KILL/5 --exec $DAEMON
+	start-stop-daemon --stop --quiet --retry=0/30/TERM/5/KILL/5 --pidfile $PIDFILE
 	[ "$?" = 2 ] && return 2
 	# Many daemons don't delete their pidfiles when they exit.
 	rm -f $PIDFILE
@@ -122,16 +124,6 @@ case "$1" in
 	log_daemon_msg "Reloading $DESC" "$NAME"
 	do_reload
 	log_end_msg $?
-	;;
-    reopen-logs)
-	log_daemon_msg "Reopening $DESC logs" $NAME
-	if start-stop-daemon --stop --signal USR1 --oknodo --quiet \
-	    --pidfile $PIDFILE --exec $DAEMON
-	then
-	    log_end_msg 0
-	else
-	    log_end_msg 1
-	fi
 	;;
     restart)
 	log_daemon_msg "Restarting $DESC" "$NAME"

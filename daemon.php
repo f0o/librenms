@@ -76,15 +76,18 @@ function fork() {
  * @param int $lvl Log-Level
  * @return void
  */
-function logger($msgs,$lvl=0) {
+function logger($msgs,$lvl=LOG_INFO) {
+	global $config;
+	openlog('librenms', (LOG_CONS | LOG_NDELAY | LOG_PID), $config['daemon']['facility']);
 	if( !is_array($msgs) ) {
 		$msgs = explode("\n",$msgs);
 	}
 	foreach( $msgs as $msg ) {
 		if( !empty($msg) ) {
-			echo str_pad(microtime(true),15,0).' - '.posix_getpid().' - '.$msg."\r\n";
+			syslog($lvl,$msg);
 		}
 	}
+	closelog();
 }
 
 /**
@@ -110,7 +113,7 @@ function spawn($job) {
 				$out = ob_get_clean();
 			}
 		}
-		logger($out);
+		logger($out,LOG_DEBUG);
 		exit($code);
 	} else {
 		logger('Spawned Job '.$job['file'].' PID #'.$pid);
@@ -134,6 +137,7 @@ function cleanup($sig, $pid=-1, $status=null) {
 /**
  * Main-loop
  */
+loadcnf();
 $i=1;
 do {
 	$ts += $step;

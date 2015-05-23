@@ -666,4 +666,25 @@ $config['ipmi']['type'][]                                = "lan";
 $config['ipmi']['type'][]                                = "imb";
 $config['ipmi']['type'][]                                = "open";
 
-?>
+$config['daemon']['intervals'] = array(
+	1    => array(
+		//Run every minute
+		//array('type'=>'include', 'file'=>'alerts.php'), //condition located in includes/definitions.inc.php
+	),
+	5    => array(
+		//Run every 5 minutes
+		array('type'=>'exec',    'file'=>'discovery.php',     'args'=>'-h new'),
+		array('type'=>'exec',    'file'=>'poller-wrapper.py', 'args'=>'16'),
+		//array('type'=>'exec',    'file'=>'poll-billing.php'), //condition located in includes/definitions.inc.php
+		//array('type'=>'exec',    'file'=>'check-services.php'), //condition located in includes/definitions.inc.php
+	),
+	393  => array(
+		//Run every 6 hours and 33 minutes
+		array('type'=>'exec',    'file'=>'discovery.php',     'args'=>'-h all'),
+	),
+	1440 => array(
+		//Run daily
+		//array('type'=>'exec',    'file'=>'billing-calculate.php'), //condition located in includes/definitions.inc.php
+		array('type'=>'exec',    'file'=>'daily.sh'),
+	),
+);

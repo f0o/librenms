@@ -34,19 +34,21 @@ $config = array();
 
 /**
  * (Re)load config
- * @return void
+ * @return array
  */
 function loadcnf() {
 	global $config;
-	include("includes/defaults.inc.php");
-	include("config.php");
-	include("includes/definitions.inc.php");
+	unset($config);
+	require("includes/defaults.inc.php");
+	require("config.php");
+	require("includes/definitions.inc.php");
+	return $config;
 }
 
 /**
  * Sleep until timestamp
  * @param float $ts Microtime-Target
- * @return true
+ * @return boolean
  */
 function sleep_until($ts) {
 	while( ($delta=($ts-microtime(true))) > 0 ) {
@@ -96,11 +98,12 @@ function logger($msgs,$lvl=LOG_INFO) {
  * @return void
  */
 function spawn($job) {
-	global $config, $argv, $argc;
+	global $config;
 	$pid = fork();
 	if( $pid === true ) {
 		$job['file'] = $config['install_dir'].'/'.$job['file'];
 		$code = 0;
+		$out = '';
 		if( $job['type'] == 'exec' ) {
 			$out  = explode("\n",shell_exec($job['file'].' '.$job['args'].' 2>&1 || echo -n $?'));
 			$code = (int) array_pop($out);
@@ -137,14 +140,14 @@ function cleanup($sig, $pid=-1, $status=null) {
 /**
  * Main-loop
  */
-loadcnf();
+$config = loadcnf();
 $i=1;
 do {
 	$ts += $step;
 	logger("Interval #".$i);
 
 	// Update config-cache
-	loadcnf();
+	$config = loadcnf();
 
 	// Cycle through daemons
 	foreach( $config['daemon']['intervals'] as $int => $run ) {
@@ -156,5 +159,5 @@ do {
 	}
 
 	$i++;
-} while( sleep_until($ts) == true );
+} while( sleep_until($ts) === true );
 ?>

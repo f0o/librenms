@@ -690,4 +690,5 @@ $config['daemon'] = array(
 		),
 	),
 	'facility' => LOG_DAEMON,
+	'timesync' => true,
 );

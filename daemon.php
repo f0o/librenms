@@ -141,7 +141,15 @@ function cleanup($sig, $pid=-1, $status=null) {
  * Main-loop
  */
 $config = loadcnf();
-$i=1;
+
+if( $config['daemon']['timesync'] == true ) {
+	logger('Time-Sync active, Syncing...');
+	sleep_until( time() + ( 60 - ( time() % 60 ) ) );
+	$i = ((microtime(true)%86400)/60);
+	$ts = microtime(true);
+} else {
+	$i = 1;
+}
 do {
 	$ts += $step;
 	logger("Interval #".$i);

@@ -1808,6 +1808,6 @@ if( $config['enable_billing'] ) {
 	$config['daemon']['intervals'][5][]    = array('type'=>'exec', 'file'=>'poll-billing.php');
 	$config['daemon']['intervals'][1440][] = array('type'=>'exec', 'file'=>'billing-calculate.php');
 }
-if( !$config['alerts']['email']['enable'] || !empty($config['alert']['transports']) ) {
+if( !empty($config['alert']['transports']) ) {
 	$config['daemon']['intervals'][1][] = array('type'=>'include', 'file'=>'alerts.php');
 }

@@ -1,4 +1,5 @@
 use_docker
+use_mysql
 base jenkins:base
 require nginx php5-fpm php5-mysql rrdtool
 target /opt/librenms

@@ -1,23 +1,26 @@
 use_docker
 use_mysql
 base jenkins:base
-require nginx php5-fpm php5-mysql rrdtool
-target /opt/librenms
+require nginx php5-fpm php5-mysql php5-gd php5-mcrypt php5-snmp php-pear fping rrdtool git cron snmp python python-mysqldb
+target /opt/librenms www-data
+include rrd
 ports 80
+exec dpkg-statoverride --update --add root root 4755 /usr/bin/fping
+exec pear install Net_IPv4 Net_IPv6
+exec cp /opt/librenms/librenms.cron /etc/cron.d/librenms
 -- /etc/nginx/sites-available/default
 + server {
 +  listen 80;
-+  server_name _;
++  server_name %CONTAINER_HOSTNAME;
 +  root        /opt/librenms/html;
 +  index       index.php;
-+  access_log  /opt/librenms/logs/access_log;
-+  error_log   /opt/librenms/logs/error_log;
 +  location / {
 +   disable_symlinks off;
 +   try_files $uri $uri/ @librenms;
 +  }
 +  location ~ \.php {
 +   include fastcgi_params;
++   fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
 +   fastcgi_split_path_info ^(.+\.php)(/.+)$;
 +   fastcgi_pass unix:/var/run/php5-fpm.sock;
 +  }
@@ -30,10 +33,10 @@ ports 80
 +  }
 + }
 --
--- /opt/librenms/config.php
+-- /opt/librenms/config.php www-data
 + <?php
-+ $config['db_host'] = "%MYSQL_HOST";
-+ $config['db_user'] = "%MYSQL_USER";
-+ $config['db_pass'] = "%MYSQL_PASSWORD";
-+ $config['db_name'] = "%MYSQL_DATABASE";
++ $config['db_host']   = "%MYSQL_HOST";
++ $config['db_user']   = "%MYSQL_USER";
++ $config['db_pass']   = "%MYSQL_PASSWORD";
++ $config['db_name']   = "%MYSQL_DATABASE";
 --

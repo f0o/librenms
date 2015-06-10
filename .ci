@@ -40,3 +40,5 @@ exec cp /opt/librenms/librenms.cron /etc/cron.d/librenms
 + $config['db_pass']   = "%MYSQL_PASSWORD";
 + $config['db_name']   = "%MYSQL_DATABASE";
 --
+
+

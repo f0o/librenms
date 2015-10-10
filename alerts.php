@@ -177,10 +177,25 @@ function RunFollowUp() {
         if ($n > $o) {
             $ret  .= ' Worsens';
             $state = 3;
+            $a     = $chk;
+            $b     = $alert['details']['rule'];
         }
         else if ($n < $o) {
             $ret  .= ' Betters';
             $state = 4;
+            $a     = $alert['details']['rule'];
+            $b     = $chk;
+        }
+
+        if( !empty($a) && !empty($b) ) {
+            foreach( $a as $i=>$v ) {
+                foreach( $v as $k=>$data ) {
+                    if( stristr($k,'_id') && $b[$i][$k] != $data ) {
+                        $alert['details']['diff'][] = $v;
+                        break;
+                    }
+                }
+            }
         }
 
         if ($state > 0 && $n > 0) {
@@ -463,6 +478,10 @@ function DescribeAlert($alert) {
                     $obj['faults'][$i]['string'] .= $k.' => '.$v.'; ';
                 }
             }
+        }
+        $obj['elapsed'] = TimeFormat(time() - strtotime($alert['time_logged']));
+        if( !empty($extra['diff']) ) {
+            $obj['diff'] = $extra['diff'];
         }
     }
     else if ($alert['state'] == 0) {
